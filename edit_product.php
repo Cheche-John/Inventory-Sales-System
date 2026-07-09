@@ -62,32 +62,11 @@ value="<?= $product['product_name']; ?>">
 
 <div class="mb-3">
 <label>Buying Price</label>
-<input
-type="number"
-step="0.01"
-name="buying_price"
-class="form-control"
-value="<?= $product['buying_price']; ?>">
-</div>
+<input type="number" step="0.01" min="0" name="buying_price" ...>
 
-<div class="mb-3">
-<label>Selling Price</label>
-<input
-type="number"
-step="0.01"
-name="selling_price"
-class="form-control"
-value="<?= $product['selling_price']; ?>">
-</div>
+<input type="number" step="0.01" min="0" name="selling_price" ...>
 
-<div class="mb-3">
-<label>Quantity</label>
-<input
-type="number"
-name="quantity"
-class="form-control"
-value="<?= $product['quantity']; ?>">
-</div>
+<input type="number" min="0" name="quantity" ...>
 
 <div class="mb-3">
 <label>New Image</label>

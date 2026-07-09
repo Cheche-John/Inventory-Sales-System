@@ -7,6 +7,13 @@ $product_name = $_POST['product_name'];
 $buying_price = $_POST['buying_price'];
 $selling_price = $_POST['selling_price'];
 $quantity = $_POST['quantity'];
+if(
+    $buying_price < 0 ||
+    $selling_price < 0 ||
+    $quantity < 0
+){
+    die("Prices and quantity cannot be negative.");
+}
 
 if($_FILES['image']['name']!=''){
 
