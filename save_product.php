@@ -5,10 +5,12 @@ $barcode = $_POST['barcode'];
 $product_name = $_POST['product_name'];
 $category_id = $_POST['category_id'];
 $buying_price = $_POST['buying_price'];
+$best_price = $_POST['best_price'];
 $selling_price = $_POST['selling_price'];
 $quantity = $_POST['quantity'];
 if(
     $buying_price < 0 ||
+    $best_price < 0 ||
     $selling_price < 0 ||
     $quantity < 0
 ){
@@ -29,15 +31,27 @@ if(isset($_FILES['image']) && $_FILES['image']['name']!=''){
 }
 
 $sql =
-"INSERT INTO products
-(barcode,product_name,buying_price,selling_price,quantity,image)
-VALUES
-('$barcode',
+INSERT INTO products
+(
+barcode,
+product_name,
+category_id,
+buying_price,
+best_price,
+selling_price,
+quantity,
+image
+)
+(
+'$barcode',
 '$product_name',
+'$category_id',
 '$buying_price',
+'$best_price',
 '$selling_price',
 '$quantity',
-'$image')";
+'$image'
+)";
 
 if(mysqli_query($conn,$sql)){
     header("Location: products.php");

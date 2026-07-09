@@ -43,8 +43,8 @@ MJ SYSTEM
 📦 Products
 </a>
 
-<a href="#">
-🛒 Sales
+<a href="sales.php">
+    🛒 Sales
 </a>
 
 <a href="#">

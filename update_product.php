@@ -5,10 +5,12 @@ $id = $_POST['id'];
 $barcode = $_POST['barcode'];
 $product_name = $_POST['product_name'];
 $buying_price = $_POST['buying_price'];
+$best_price = $_POST['best_price'];
 $selling_price = $_POST['selling_price'];
 $quantity = $_POST['quantity'];
 if(
     $buying_price < 0 ||
+    $best_price < 0 ||
     $selling_price < 0 ||
     $quantity < 0
 ){
@@ -31,6 +33,7 @@ if($_FILES['image']['name']!=''){
     barcode='$barcode',
     product_name='$product_name',
     buying_price='$buying_price',
+    best_price='$best_price',
     selling_price='$selling_price',
     quantity='$quantity',
     image='$image'
@@ -44,6 +47,7 @@ else{
     barcode='$barcode',
     product_name='$product_name',
     buying_price='$buying_price',
+    best_price='$best_price',
     selling_price='$selling_price',
     quantity='$quantity'
     WHERE id='$id'";

@@ -1,0 +1,50 @@
+body{
+    background:#f4f6f9;
+    min-height:100vh;
+}
+
+.nav-buttons a{
+    margin-right:10px;
+    border-radius:12px;
+}
+
+.pos-card{
+    border:none;
+    border-radius:20px;
+    box-shadow:0 8px 25px rgba(0,0,0,0.1);
+}
+
+.header-card{
+    background:linear-gradient(
+        135deg,
+        #0d6efd,
+        #198754
+    );
+
+    color:white;
+    padding:30px;
+    border-radius:20px 20px 0 0;
+}
+
+.header-card h2{
+    font-weight:bold;
+}
+
+.form-control,
+.form-select{
+    height:50px;
+    border-radius:12px;
+}
+
+.sale-btn{
+    width:100%;
+    padding:15px;
+    border-radius:12px;
+    font-size:18px;
+    font-weight:bold;
+}
+
+.card-body{
+    background:white;
+    border-radius:0 0 20px 20px;
+}

@@ -71,6 +71,7 @@ id="productTable">
 <th>Barcode</th>
 <th>Name</th>
 <th>Buying</th>
+<th>Best Price</th>
 <th>Selling</th>
 <th>Quantity</th>
 <th>Profit</th>
@@ -104,6 +105,8 @@ width="50">
 <td><?= $row['product_name']; ?></td>
 
 <td><?= $row['buying_price']; ?></td>
+
+<td><?= $row['best_price']; ?></td>
 
 <td><?= $row['selling_price']; ?></td>
 

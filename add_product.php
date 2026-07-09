@@ -78,6 +78,11 @@ value="<?= $cat['id']; ?>">
 </div>
 
 <div class="mb-3">
+<label>Best Price</label>
+<input type="number" step="0.01" min="0" name="best_price" class="form-control" required>
+</div>
+
+<div class="mb-3">
 <label>Selling Price</label>
 <input type="number" step="0.01" min="0" name="selling_price" class="form-control" required>
 </div>
