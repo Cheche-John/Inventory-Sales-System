@@ -5,6 +5,14 @@ if(!isset($_SESSION['user_id'])){
     header("Location: login.php");
     exit();
 }
+
+include 'config.php';
+
+$categories =
+mysqli_query(
+$conn,
+"SELECT * FROM categories"
+);
 ?>
 
 <!DOCTYPE html>
@@ -34,6 +42,34 @@ if(!isset($_SESSION['user_id'])){
 <div class="mb-3">
 <label>Product Name</label>
 <input type="text" name="product_name" class="form-control" required>
+</div>
+
+<div class="mb-3">
+
+<label>Category</label>
+
+<select
+name="category_id"
+class="form-control"
+required>
+
+<option value="">
+Select Category
+</option>
+
+<?php while($cat=mysqli_fetch_assoc($categories)){ ?>
+
+<option
+value="<?= $cat['id']; ?>">
+
+<?= $cat['category_name']; ?>
+
+</option>
+
+<?php } ?>
+
+</select>
+
 </div>
 
 <div class="mb-3">

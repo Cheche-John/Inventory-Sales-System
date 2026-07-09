@@ -48,6 +48,9 @@ MJ SYSTEM
 </a>
 
 <a href="#">
+ <a href="categories.php">
+📂 Categories
+</a>   
 👥 Customers
 </a>
 

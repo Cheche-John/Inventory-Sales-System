@@ -3,6 +3,7 @@ include 'config.php';
 
 $barcode = $_POST['barcode'];
 $product_name = $_POST['product_name'];
+$category_id = $_POST['category_id'];
 $buying_price = $_POST['buying_price'];
 $selling_price = $_POST['selling_price'];
 $quantity = $_POST['quantity'];
