@@ -13,6 +13,17 @@ $products = mysqli_query(
     WHERE quantity > 0
     ORDER BY product_name"
 );
+
+$cart = mysqli_query(
+    $conn,
+    "SELECT
+        cart.*,
+        products.product_name
+    FROM cart
+    JOIN products
+    ON cart.product_id = products.id
+    WHERE cart.user_id='".$_SESSION['user_id']."'"
+);
 ?>
 
 <!DOCTYPE html>
@@ -20,9 +31,13 @@ $products = mysqli_query(
 <head>
     <title>Sales POS</title>
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet">
 
-    <link rel="stylesheet" href="assets/css/sales.css">
+    <link
+        rel="stylesheet"
+        href="assets/css/sales.css">
 </head>
 <body>
 
@@ -46,7 +61,7 @@ $products = mysqli_query(
 
     <div class="card pos-card">
 
-        <div class="header-card">
+        <div class="header-card text-center">
 
             <h2>🛒 Point Of Sale (POS)</h2>
 
@@ -58,10 +73,13 @@ $products = mysqli_query(
 
         <div class="card-body p-4">
 
-            <form action="save_sale.php" method="POST">
+            <!-- Add Product Form -->
+            <form action="add_to_cart.php" method="POST">
 
                 <div class="mb-3">
-                    <label class="fw-bold">Product</label>
+                    <label class="fw-bold">
+                        Product
+                    </label>
 
                     <select
                         name="product_id"
@@ -72,7 +90,7 @@ $products = mysqli_query(
                             Select Product
                         </option>
 
-                        <?php while($product=mysqli_fetch_assoc($products)){ ?>
+                        <?php while($product = mysqli_fetch_assoc($products)){ ?>
 
                             <option value="<?= $product['id']; ?>">
 
@@ -89,6 +107,7 @@ $products = mysqli_query(
                 </div>
 
                 <div class="mb-3">
+
                     <label class="fw-bold">
                         Quantity
                     </label>
@@ -99,9 +118,11 @@ $products = mysqli_query(
                         class="form-control"
                         min="1"
                         required>
+
                 </div>
 
                 <div class="mb-3">
+
                     <label class="fw-bold">
                         Selling Price
                     </label>
@@ -117,15 +138,185 @@ $products = mysqli_query(
                     <small class="text-muted">
                         Price must be between Best Price and Selling Price.
                     </small>
+
                 </div>
 
-                <button class="btn btn-success sale-btn">
+                <button
+                    type="submit"
+                    class="btn btn-success sale-btn">
+
+                    🛒 Add To Cart
+
+                </button>
+
+            </form>
+
+            <!-- Current Cart -->
+            <h3 class="mt-5">
+                🛒 Current Cart
+            </h3>
+
+            <table class="table table-bordered table-striped">
+
+                <thead class="table-dark">
+                    <tr>
+                        <th>Product</th>
+                        <th>Qty</th>
+                        <th>Price</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                <?php
+                $total = 0;
+
+                while($item = mysqli_fetch_assoc($cart)){
+
+                    $subtotal =
+                        $item['quantity'] *
+                        $item['price'];
+
+                    $total += $subtotal;
+                ?>
+
+                    <tr>
+
+                        <td>
+                            <?= $item['product_name']; ?>
+                        </td>
+
+                        <td>
+                            <?= $item['quantity']; ?>
+                        </td>
+
+                        <td>
+                            KSh <?= number_format($item['price'],2); ?>
+                        </td>
+
+                        <td>
+                            KSh <?= number_format($subtotal,2); ?>
+                        </td>
+
+                    </tr>
+
+                <?php } ?>
+
+                <tr>
+
+                    <th colspan="3">
+                        Grand Total
+                    </th>
+
+                    <th>
+                        KSh <?= number_format($total,2); ?>
+                    </th>
+
+                </tr>
+
+                </tbody>
+
+            </table>
+
+            <!-- Checkout Form -->
+            <?php if($total > 0){ ?>
+
+            <form action="checkout.php" method="POST">
+
+             <div class="mb-3">
+
+    <label class="fw-bold">
+        Customer (Optional)
+    </label>
+
+    <select
+        name="customer_id"
+        class="form-select">
+
+        <option value="">
+            Cash Sale
+        </option>
+
+        <?php
+
+        $customers = mysqli_query(
+            $conn,
+            "SELECT *
+            FROM customers
+            ORDER BY customer_name"
+        );
+
+        while($customer =
+            mysqli_fetch_assoc($customers))
+        {
+        ?>
+
+            <option
+                value="<?= $customer['id']; ?>">
+
+                <?= $customer['customer_name']; ?>
+
+                <?php
+                if($customer['phone'] != ''){
+                    echo ' - '.$customer['phone'];
+                }
+                ?>
+
+            </option>
+
+        <?php } ?>
+
+    </select>
+
+</div>
+            
+            <div class="mb-3">
+
+                    <label class="fw-bold">
+                        Payment Method
+                    </label>
+
+                    <select
+                        name="payment_method"
+                        class="form-select"
+                        required>
+
+                        <option value="">
+                            Select Payment Method
+                        </option>
+
+                        <option value="Cash">
+                            Cash
+                        </option>
+
+                        <option value="Mpesa">
+                            Mpesa
+                        </option>
+
+                        <option value="Card">
+                            Card
+                        </option>
+
+                        <option value="Bank Transfer">
+                            Bank Transfer
+                        </option>
+
+                    </select>
+
+                </div>
+
+                <button
+                    type="submit"
+                    class="btn btn-success">
 
                     💰 Complete Sale
 
                 </button>
 
             </form>
+
+            <?php } ?>
 
         </div>
 

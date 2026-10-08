@@ -1,0 +1,13 @@
+body{
+    background:#f4f6f9;
+}
+
+.receipt{
+    width:700px;
+    margin:auto;
+    margin-top:40px;
+    background:white;
+    padding:30px;
+    border-radius:20px;
+    box-shadow:0 5px 20px rgba(0,0,0,0.1);
+}

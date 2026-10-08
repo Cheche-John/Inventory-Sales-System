@@ -47,12 +47,13 @@ MJ SYSTEM
     🛒 Sales
 </a>
 
+<a href="customers.php" class="btn btn-info">
+    👥 Customers
+</a>
+
 <a href="#">
  <a href="categories.php">
 📂 Categories
-</a>   
-👥 Customers
-</a>
 
 <a href="#">
 📊 Reports
@@ -60,6 +61,10 @@ MJ SYSTEM
 
 <a href="#">
 🔔 Alerts
+</a>
+
+<a href="settings.php" class="btn btn-dark">
+⚙️ Settings
 </a>
 
 <a href="logout.php">
