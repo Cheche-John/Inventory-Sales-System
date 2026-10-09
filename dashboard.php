@@ -52,8 +52,7 @@ MJ SYSTEM
 </a>
 
 <a href="#">
- <a href="categories.php">
-📂 Categories
+<a href="category.php">📂 Categories</a>
 
 <a href="#">
 📊 Reports
