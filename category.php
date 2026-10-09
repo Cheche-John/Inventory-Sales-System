@@ -3,358 +3,225 @@
 session_start();
 require_once 'config.php';
 
-mysqli_set_charset($conn, "utf8mb4");
+mysqli_set_charset($conn, 'utf8mb4');
 
-/* Search categories */
+if (empty($_SESSION['category_csrf'])) {
+    $_SESSION['category_csrf'] = bin2hex(random_bytes(32));
+}
+
+function e($value) {
+    return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+}
+
 $search = trim($_GET['search'] ?? '');
-$search_term = "%{$search}%";
+$searchTerm = '%' . $search . '%';
+$error = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_category'])) {
+    $token = $_POST['csrf_token'] ?? '';
+    $categoryId = filter_var(
+        $_POST['category_id'] ?? null,
+        FILTER_VALIDATE_INT
+    );
+
+    if (!is_string($token) ||
+        !hash_equals($_SESSION['category_csrf'], $token)) {
+        $error = 'Security check failed. Refresh the page and try again.';
+    } elseif (!$categoryId || $categoryId < 1) {
+        $error = 'Invalid category selected.';
+    } else {
+        $check = $conn->prepare(
+            'SELECT COUNT(*) FROM products WHERE category_id = ?'
+        );
+        $check->bind_param('i', $categoryId);
+        $check->execute();
+        $check->bind_result($productCount);
+        $check->fetch();
+        $check->close();
+
+        if ($productCount > 0) {
+            $error = "This category cannot be deleted because it has {$productCount} product(s). Move those products to another category first.";
+        } else {
+            $delete = $conn->prepare(
+                'DELETE FROM categories WHERE id = ?'
+            );
+            $delete->bind_param('i', $categoryId);
+
+            if ($delete->execute() && $delete->affected_rows > 0) {
+                $delete->close();
+                header('Location: category.php?deleted=1');
+                exit;
+            } else {
+                $error = 'Category was not deleted. It may already have been removed.';
+            }
+
+            $delete->close();
+        }
+    }
+}
 
 $stmt = $conn->prepare("
-    SELECT
-        c.id,
-        c.category_name,
-        COUNT(p.id) AS product_count
+    SELECT c.id, c.category_name, COUNT(p.id) AS product_count
     FROM categories c
     LEFT JOIN products p ON p.category_id = c.id
     WHERE c.category_name LIKE ?
     GROUP BY c.id, c.category_name
     ORDER BY c.category_name ASC
 ");
-
-$stmt->bind_param("s", $search_term);
+$stmt->bind_param('s', $searchTerm);
 $stmt->execute();
-$categories = $stmt->get_result();
+$result = $stmt->get_result();
 
-/* Statistics */
-$category_stats = mysqli_query(
-    $conn,
-    "SELECT COUNT(*) AS total FROM categories"
-);
+$totalCategories = 0;
+$totalProducts = 0;
 
-$total_categories = (int)mysqli_fetch_assoc(
-    $category_stats
-)['total'];
+$countResult = $conn->query('SELECT COUNT(*) AS total FROM categories');
+if ($countResult) {
+    $totalCategories = (int)$countResult->fetch_assoc()['total'];
+}
 
-$product_stats = mysqli_query(
-    $conn,
-    "SELECT COUNT(*) AS total FROM products"
-);
-
-$total_products = (int)mysqli_fetch_assoc(
-    $product_stats
-)['total'];
-
-$categories_found = $categories->num_rows;
-
-function e($value) {
-    return htmlspecialchars(
-        (string)$value,
-        ENT_QUOTES,
-        'UTF-8'
-    );
+$productResult = $conn->query('SELECT COUNT(*) AS total FROM products');
+if ($productResult) {
+    $totalProducts = (int)$productResult->fetch_assoc()['total'];
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>Category Management | Inventory System</title>
-
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-        rel="stylesheet">
-
-    <link
-        rel="stylesheet"
-        href="assets/css/category.css">
+    <title>Categories | InventoryPro</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/category.css">
 </head>
-
 <body>
 
-<div class="app-container">
+<div class="container py-4 py-md-5">
 
-    <!-- TOP NAVIGATION -->
-    <nav class="topbar">
-
-        <a href="dashboard.php" class="brand">
-            <span class="brand-logo">IS</span>
-
-            <span class="brand-text">
-                <strong>Inventory<span>Pro</span></strong>
-                <small>Sales & Inventory Management</small>
-            </span>
-        </a>
-
-        <div class="topbar-actions">
-
-            <a href="index.php" class="nav-link-custom">
-                Homepage
-            </a>
-
-            <a href="dashboard.php" class="dashboard-button">
-                <span>⌂</span> Dashboard
-            </a>
-
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <p class="text-uppercase text-muted small mb-1">Inventory management</p>
+            <h1 class="h2 mb-1">Categories</h1>
+            <p class="text-muted mb-0">Organise and manage your product categories.</p>
         </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="index.php" class="btn btn-outline-secondary">Home</a>
+            <a href="dashboard.php" class="btn btn-outline-secondary">Dashboard</a>
+            <a href="add_category.php" class="btn btn-primary">+ Add Category</a>
+        </div>
+    </div>
 
-    </nav>
+    <?php if (isset($_GET['deleted'])): ?>
+        <div class="alert alert-success">Category deleted successfully.</div>
+    <?php endif; ?>
 
-    <main class="main-content">
+    <?php if ($error !== ''): ?>
+        <div class="alert alert-danger"><?= e($error) ?></div>
+    <?php endif; ?>
 
-        <!-- PAGE INTRODUCTION -->
-        <section class="page-intro">
-
-            <div>
-                <div class="eyebrow">
-                    INVENTORY ORGANIZATION
-                </div>
-
-                <h1>Category Management</h1>
-
-                <p>
-                    Organize your inventory, group related products
-                    and keep your business running smoothly.
-                </p>
-            </div>
-
-            <a href="add_category.php" class="add-category-button">
-                <span>＋</span>
-                Add New Category
-            </a>
-
-        </section>
-
-        <!-- STATISTICS -->
-        <section class="stats-grid">
-
-            <div class="stat-card">
-                <div class="stat-icon icon-purple">▦</div>
-
-                <div>
-                    <p>Total Categories</p>
-                    <h2><?= $total_categories ?></h2>
-                    <small>All registered categories</small>
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <div class="text-muted small">Total categories</div>
+                    <div class="display-6 fw-semibold"><?= $totalCategories ?></div>
                 </div>
             </div>
-
-            <div class="stat-card">
-                <div class="stat-icon icon-blue">▣</div>
-
-                <div>
-                    <p>Total Products</p>
-                    <h2><?= $total_products ?></h2>
-                    <small>Products in your inventory</small>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <div class="text-muted small">Total products</div>
+                    <div class="display-6 fw-semibold"><?= $totalProducts ?></div>
                 </div>
             </div>
+        </div>
+    </div>
 
-            <div class="stat-card">
-                <div class="stat-icon icon-green">⌕</div>
-
-                <div>
-                    <p>Categories Found</p>
-                    <h2><?= $categories_found ?></h2>
-                    <small>
-                        <?= $search !== ''
-                            ? 'Matching your search'
-                            : 'Currently displayed' ?>
-                    </small>
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-3 p-md-4">
+            <form method="GET" action="category.php" class="row g-2 mb-4">
+                <div class="col-sm">
+                    <input
+                        type="search"
+                        name="search"
+                        class="form-control"
+                        placeholder="Search categories..."
+                        value="<?= e($search) ?>"
+                    >
                 </div>
-            </div>
-
-        </section>
-
-        <!-- CATEGORY TABLE PANEL -->
-        <section class="content-panel">
-
-            <div class="panel-header">
-
-                <div>
-                    <h3>Your Categories</h3>
-
-                    <p>
-                        View your categories and the products
-                        associated with each one.
-                    </p>
+                <div class="col-sm-auto d-flex gap-2">
+                    <button type="submit" class="btn btn-dark">Search</button>
+                    <a href="category.php" class="btn btn-outline-secondary">Clear</a>
                 </div>
-
-                <span class="total-badge">
-                    <?= $categories_found ?>
-                    <?= $categories_found === 1 ? 'category' : 'categories' ?>
-                </span>
-
-            </div>
-
-            <!-- SEARCH -->
-            <form method="GET" action="category.php" class="search-form">
-
-                <span class="search-icon">⌕</span>
-
-                <input
-                    type="search"
-                    name="search"
-                    value="<?= e($search) ?>"
-                    placeholder="Search by category name..."
-                    aria-label="Search categories">
-
-                <button type="submit">
-                    Search
-                </button>
-
-                <?php if ($search !== ''): ?>
-                    <a href="category.php" class="clear-button">
-                        Clear
-                    </a>
-                <?php endif; ?>
-
             </form>
 
-            <!-- TABLE -->
             <div class="table-responsive">
-
-                <table class="table category-table">
-
-                    <thead>
+                <table class="table table-hover align-middle">
+                    <thead class="table-dark">
                         <tr>
-                            <th>Category</th>
-                            <th>Category ID</th>
+                            <th>ID</th>
+                            <th>Category name</th>
                             <th>Products</th>
                             <th>Status</th>
+                            <th style="min-width: 190px;">Actions</th>
                         </tr>
                     </thead>
-
                     <tbody>
-
-                    <?php if ($categories_found > 0): ?>
-
-                        <?php while ($row = mysqli_fetch_assoc($categories)): ?>
-
+                    <?php if ($result->num_rows > 0): ?>
+                        <?php while ($row = $result->fetch_assoc()): ?>
                             <tr>
-
-                                <td>
-                                    <div class="category-info">
-
-                                        <span class="category-avatar">
-                                            <?= e(strtoupper(
-                                                substr($row['category_name'], 0, 1)
-                                            )) ?>
-                                        </span>
-
-                                        <div>
-                                            <strong>
-                                                <?= e($row['category_name']) ?>
-                                            </strong>
-
-                                            <small>
-                                                Product category
-                                            </small>
-                                        </div>
-
-                                    </div>
-                                </td>
-
-                                <td>
-                                    <span class="category-id">
-                                        #<?= (int)$row['id'] ?>
-                                    </span>
-                                </td>
-
-                                <td>
-                                    <span class="product-count">
-                                        <?= (int)$row['product_count'] ?>
-                                        <?= (int)$row['product_count'] === 1
-                                            ? 'product'
-                                            : 'products' ?>
-                                    </span>
-                                </td>
-
+                                <td><?= (int)$row['id'] ?></td>
+                                <td class="fw-semibold"><?= e($row['category_name']) ?></td>
+                                <td><?= (int)$row['product_count'] ?></td>
                                 <td>
                                     <?php if ((int)$row['product_count'] > 0): ?>
-
-                                        <span class="status-badge active">
-                                            ● In Use
-                                        </span>
-
+                                        <span class="badge text-bg-success">In use</span>
                                     <?php else: ?>
-
-                                        <span class="status-badge empty">
-                                            ○ No Products
-                                        </span>
-
+                                        <span class="badge text-bg-secondary">No products</span>
                                     <?php endif; ?>
                                 </td>
+                                <td>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <a
+                                            class="btn btn-sm btn-outline-primary"
+                                            href="edit_category.php?id=<?= (int)$row['id'] ?>"
+                                        >Edit</a>
 
+                                        <form method="POST" action="category.php<?= $search !== '' ? '?search=' . urlencode($search) : '' ?>"
+                                              onsubmit="return confirm('Are you sure you want to delete this category?');">
+                                            <input type="hidden" name="csrf_token" value="<?= e($_SESSION['category_csrf']) ?>">
+                                            <input type="hidden" name="category_id" value="<?= (int)$row['id'] ?>">
+                                            <button type="submit" name="delete_category"
+                                                    class="btn btn-sm btn-outline-danger">
+                                                Delete
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
                             </tr>
-
                         <?php endwhile; ?>
-
                     <?php else: ?>
-
                         <tr>
-                            <td colspan="4" class="empty-state">
-
-                                <div class="empty-icon">▦</div>
-
-                                <h4>No Categories Found</h4>
-
-                                <p>
-                                    <?php if ($search !== ''): ?>
-                                        Try another search term or clear your search.
-                                    <?php else: ?>
-                                        Start organizing your inventory by adding a category.
-                                    <?php endif; ?>
-                                </p>
-
-                                <a
-                                    href="add_category.php"
-                                    class="add-category-button empty-add-button">
-                                    ＋ Add Category
-                                </a>
-
+                            <td colspan="5" class="text-center text-muted py-4">
+                                No categories found.
                             </td>
                         </tr>
-
                     <?php endif; ?>
-
                     </tbody>
-
                 </table>
-
             </div>
+        </div>
+    </div>
 
-            <div class="panel-footer">
-                <span>Inventory Management System</span>
-                <span>Category Management</span>
-            </div>
-
-        </section>
-
-        <!-- HELPFUL TIP -->
-        <section class="help-tip">
-            <span class="tip-icon">💡</span>
-
-            <div>
-                <strong>Keep your inventory organized</strong>
-
-                <p>
-                    Create meaningful categories such as Beverages,
-                    Electronics, Household Items or Gas Cylinders.
-                    Products can then be grouped under the appropriate category.
-                </p>
-            </div>
-        </section>
-
-        <footer class="page-footer">
-            &copy; <?= date('Y') ?> Inventory &amp; Sales Management System
-        </footer>
-
-    </main>
-
+    <p class="text-muted small mt-3">
+        Categories with products assigned to them cannot be deleted.
+    </p>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
 </body>
 </html>
+<?php
+$stmt->close();
+?>
