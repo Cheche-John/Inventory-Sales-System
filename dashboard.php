@@ -35,10 +35,10 @@ if ($result) {
 // Low stock means 5 units or fewer
 $result = mysqli_query(
     $conn,
-    "SELECT id, product_name, quantity
-     FROM products
-     WHERE quantity <= 5
-     ORDER BY quantity ASC, product_name ASC"
+   "SELECT id, product_name, quantity
+ FROM products
+ WHERE quantity <= minimum_stock
+ ORDER BY quantity ASC, product_name ASC"
 );
 
 if ($result) {
@@ -78,8 +78,8 @@ if ($result) {
     <a href="customers.php">👥 Customers</a>
     <a href="category.php">📂 Categories</a>
     <a href="reports.php">📊 Reports</a>
-    <a href="dashboard.php#stock-alerts">
-        🔔 Alerts
+    <a href="alerts.php">🔔 Alerts</a>
+        
         <?php if ($low_stock_count > 0) { ?>
             (<?= $low_stock_count; ?>)
         <?php } ?>
@@ -150,9 +150,9 @@ if ($result) {
 
         <div class="card-body">
 
-            <p class="text-muted">
-                Products with 5 units or fewer are listed here.
-            </p>
+           <p class="text-muted">
+    Products that have reached or fallen below their minimum stock levels are listed here.
+</p>
 
             <?php if ($low_stock_count > 0) { ?>
 

@@ -114,20 +114,21 @@ if (!$result) {
 
                     <?php
                     $quantity = (int) $row['quantity'];
+                    $minimum_stock = (int) $row['minimum_stock'];
 
                     if ($quantity <= 0) {
-                        $stock_status = 'out';
-                        $status_label = 'Out of Stock';
-                        $badge_class = 'bg-danger';
-                    } elseif ($quantity <= 5) {
-                        $stock_status = 'low';
-                        $status_label = 'Low Stock';
-                        $badge_class = 'bg-warning text-dark';
-                    } else {
-                        $stock_status = 'in';
-                        $status_label = 'In Stock';
-                        $badge_class = 'bg-success';
-                    }
+    $stock_status = 'out';
+    $status_label = 'Out of Stock';
+    $badge_class = 'bg-danger';
+} elseif ($quantity <= $minimum_stock) {
+    $stock_status = 'low';
+    $status_label = 'Low Stock';
+    $badge_class = 'bg-warning text-dark';
+} else {
+    $stock_status = 'in';
+    $status_label = 'In Stock';
+    $badge_class = 'bg-success';
+}
 
                     $buying_price = (float) $row['buying_price'];
                     $best_price = (float) $row['best_price'];
@@ -242,4 +243,3 @@ stockFilter.addEventListener('change', filterProducts);
 
 </body>
 </html>
-```
