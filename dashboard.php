@@ -30,6 +30,17 @@ $result = mysqli_query($conn, "SELECT COUNT(*) AS total FROM sales");
 if ($result) {
     $total_sales = (int) mysqli_fetch_assoc($result)['total'];
 }
+
+$result = mysqli_query(
+    $conn,
+    "SELECT COALESCE(SUM(profit), 0) AS total_profit
+     FROM sale_items"
+);
+
+if ($result) {
+    $total_profit = (float) mysqli_fetch_assoc($result)['total_profit'];
+}
+
 // Low stock means quantity is at or below the product's minimum stock level.
 $result = mysqli_query(
     $conn,
@@ -126,8 +137,8 @@ if ($result) {
         <div class="col-md-3 col-sm-6">
             <div class="stat-card">
                 <h2>KES <?= number_format($total_profit, 2); ?></h2>
-                <p>Total Profit</p>
-                <small>Profit calculation to be connected to sales records.</small>
+                <p>Total Gross Profit</p>
+<small>Calculated from recorded sales.</small>
             </div>
         </div>
 
