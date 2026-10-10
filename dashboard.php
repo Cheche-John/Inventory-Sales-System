@@ -1,4 +1,3 @@
-```php
 <?php
 session_start();
 
@@ -31,8 +30,7 @@ $result = mysqli_query($conn, "SELECT COUNT(*) AS total FROM sales");
 if ($result) {
     $total_sales = (int) mysqli_fetch_assoc($result)['total'];
 }
-
-// Low stock means 5 units or fewer
+// Low stock means quantity is at or below the product's minimum stock level.
 $result = mysqli_query(
     $conn,
    "SELECT id, product_name, quantity
@@ -78,12 +76,14 @@ if ($result) {
     <a href="customers.php">👥 Customers</a>
     <a href="category.php">📂 Categories</a>
     <a href="reports.php">📊 Reports</a>
-    <a href="alerts.php">🔔 Alerts</a>
-        
-        <?php if ($low_stock_count > 0) { ?>
-            (<?= $low_stock_count; ?>)
-        <?php } ?>
-    </a>
+    <a href="alerts.php">
+    🔔 Alerts
+    <?php if ($low_stock_count > 0) { ?>
+        <span class="badge bg-danger">
+            <?= $low_stock_count; ?>
+        </span>
+    <?php } ?>
+</a>
     <a href="settings.php">⚙️ Settings</a>
     <a href="logout.php">🚪 Logout</a>
 
@@ -199,11 +199,9 @@ if ($result) {
                 </a>
 
             <?php } else { ?>
-
-                <div class="alert alert-success mb-0">
-                    All products currently have more than 5 units in stock.
-                </div>
-
+<div class="alert alert-success mb-0">
+    All products are currently above their minimum stock levels.
+</div>
             <?php } ?>
 
         </div>
