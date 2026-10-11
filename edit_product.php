@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/includes/auth.php';
+requireRole(['admin', 'manager']);
 include 'config.php';
 
 $id = $_GET['id'];
