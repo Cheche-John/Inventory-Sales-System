@@ -1,5 +1,6 @@
-```php
 <?php
+require_once __DIR__ . '/includes/auth.php';
+requireRole(['admin', 'manager']);
 include 'config.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -33,4 +34,4 @@ if (mysqli_stmt_execute($stmt)) {
     die("Could not save category. Error: " . htmlspecialchars($error));
 }
 ?>
-```
+
