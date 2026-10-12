@@ -1,6 +1,8 @@
 
 <?php
-session_start();
+require_once __DIR__ . '/includes/auth.php';
+requireRole(['admin', 'manager', 'cashier']);
+
 require_once 'config.php';
 
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
@@ -33,11 +35,12 @@ if (isset($_POST['customer_id']) && $_POST['customer_id'] !== '') {
 
 $payment_method = $_POST['payment_method'] ?? 'Cash';
 
-$allowed_methods = ['Cash', 'Mobile Money', 'Bank'];
+$allowed_methods = ['Cash', 'Mpesa', 'Card', 'Bank Transfer'];
 
 if (!in_array($payment_method, $allowed_methods, true)) {
     die("Invalid payment method.");
 }
+
 
 try {
     $conn->begin_transaction();

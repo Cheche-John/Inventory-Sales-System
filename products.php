@@ -1,5 +1,6 @@
 <?php
-session_start();
+require_once __DIR__ . '/includes/auth.php';
+requireRole(['admin', 'manager']);
 
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");

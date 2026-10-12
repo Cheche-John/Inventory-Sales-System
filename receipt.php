@@ -1,250 +1,237 @@
+
 <?php
-include 'config.php';
+require_once __DIR__ . '/includes/auth.php';
+requireRole(['admin', 'manager', 'cashier']);
 
-$id = $_GET['id'];
+require_once __DIR__ . '/config.php';
 
-$sale =
-mysqli_fetch_assoc(
-    mysqli_query(
-        $conn,
-        "SELECT * FROM sales
-        WHERE id='$id'"
-    )
-);
-
-$user =
-mysqli_fetch_assoc(
-    mysqli_query(
-        $conn,
-        "SELECT * FROM users
-        WHERE id='{$sale['user_id']}'"
-    )
-);
-
-$customer = null;
-
-if($sale['customer_id']){
-
-    $customer =
-    mysqli_fetch_assoc(
-        mysqli_query(
-            $conn,
-            "SELECT *
-            FROM customers
-            WHERE id='".$sale['customer_id']."'"
-        )
-    );
-
+function receiptEscape($value)
+{
+    return htmlspecialchars((string)($value ?? ''), ENT_QUOTES, 'UTF-8');
 }
 
-$company =
-mysqli_fetch_assoc(
-mysqli_query(
-$conn,
-"SELECT * FROM company_settings LIMIT 1"
-)
-);
+$id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 
-$items =
-mysqli_query(
-    $conn,
-    "SELECT
-        sale_items.*,
-        products.product_name
+if (!$id || $id < 1) {
+    http_response_code(400);
+    exit('Invalid receipt ID.');
+}
+
+// Fetch the sale
+$stmt = $conn->prepare("SELECT * FROM sales WHERE id = ?");
+$stmt->bind_param("i", $id);
+$stmt->execute();
+$sale = $stmt->get_result()->fetch_assoc();
+$stmt->close();
+
+if (!$sale) {
+    http_response_code(404);
+    exit('Receipt not found.');
+}
+
+// Fetch the user who processed the sale
+$stmt = $conn->prepare("SELECT * FROM users WHERE id = ?");
+$stmt->bind_param("i", $sale['user_id']);
+$stmt->execute();
+$user = $stmt->get_result()->fetch_assoc();
+$stmt->close();
+
+// Fetch customer details, if available
+$customer = null;
+
+if (!empty($sale['customer_id'])) {
+    $stmt = $conn->prepare("SELECT * FROM customers WHERE id = ?");
+    $stmt->bind_param("i", $sale['customer_id']);
+    $stmt->execute();
+    $customer = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+}
+
+// Fetch company settings
+$companyResult = $conn->query("SELECT * FROM company_settings LIMIT 1");
+$company = $companyResult ? $companyResult->fetch_assoc() : null;
+
+if (!$company) {
+    $company = [
+        'company_name' => 'Inventory & Sales',
+        'currency' => 'KSh',
+        'address' => '',
+        'phone' => '',
+        'email' => '',
+        'receipt_footer' => 'Thank you for shopping with us.'
+    ];
+}
+
+// Fetch items on this receipt
+$stmt = $conn->prepare("
+    SELECT sale_items.*, products.product_name
     FROM sale_items
-    JOIN products
-    ON sale_items.product_id = products.id
-    WHERE sale_items.sale_id='$id'"
-);
+    JOIN products ON sale_items.product_id = products.id
+    WHERE sale_items.sale_id = ?
+");
+$stmt->bind_param("i", $id);
+$stmt->execute();
+$items = $stmt->get_result();
 ?>
 
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<title>Receipt</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Receipt - <?= receiptEscape($sale['receipt_no']) ?></title>
 
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/receipt.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/receipt.css">
 </head>
 <body>
 
 <div class="receipt">
 
-<h2 class="text-center">
-<?= $company['company_name']; ?>
-</h2>
+    <h2 class="text-center">
+        <?= receiptEscape($company['company_name']) ?>
+    </h2>
 
-<p class="text-center text-muted">
-Inventory & Sales Management System
-</p>
+    <p class="text-center text-muted">
+        Inventory &amp; Sales Management System
+    </p>
 
-<hr>
+    <hr>
 
-<p>
-<strong>Receipt No:</strong>
-<?= $sale['receipt_no']; ?>
-</p>
+    <p><strong>Receipt No:</strong>
+        <?= receiptEscape($sale['receipt_no']) ?>
+    </p>
 
-<p>
-<strong>Date:</strong>
-<?= date('d M Y', strtotime($sale['created_at'])); ?>
-</p>
+    <p><strong>Date:</strong>
+        <?= date('d M Y', strtotime($sale['created_at'])) ?>
+    </p>
 
-<p>
-<strong>Time:</strong>
-<?= date('h:i:s A', strtotime($sale['created_at'])); ?>
-</p>
+    <p><strong>Time:</strong>
+        <?= date('h:i:s A', strtotime($sale['created_at'])) ?>
+    </p>
 
-<?php if($customer){ ?>
+    <?php if ($customer): ?>
+        <p><strong>Customer:</strong>
+            <?= receiptEscape($customer['customer_name'] ?? 'Customer') ?>
+        </p>
 
-<p>
-<strong>Customer:</strong>
-<?= $customer['customer_name']; ?>
-</p>
+        <?php if (!empty($customer['phone'])): ?>
+            <p><strong>Phone:</strong>
+                <?= receiptEscape($customer['phone']) ?>
+            </p>
+        <?php endif; ?>
+    <?php else: ?>
+        <p><strong>Customer:</strong> Cash Sale</p>
+    <?php endif; ?>
 
-<?php if($customer['phone']){ ?>
+    <p><strong>Served By:</strong>
+        <?= receiptEscape($user['fullname'] ?? 'Unknown') ?>
+    </p>
 
-<p>
-<strong>Phone:</strong>
-<?= $customer['phone']; ?>
-</p>
+    <p><strong>Role:</strong>
+        <?= receiptEscape(ucfirst($user['role'] ?? '')) ?>
+    </p>
 
-<?php } ?>
+    <p><strong>Employee No:</strong>
+        <?= receiptEscape($user['employee_no'] ?? '') ?>
+    </p>
 
-<?php } else { ?>
+    <p><strong>Branch:</strong>
+        <?= receiptEscape($user['branch'] ?? '') ?>
+    </p>
 
-<p>
-<strong>Customer:</strong>
-Cash Sale
-</p>
+    <p><strong>Payment Method:</strong>
+        <?= receiptEscape($sale['payment_method']) ?>
+    </p>
 
-<?php } ?>
+    <hr>
 
-<p>
-<strong>Served By:</strong>
-<?= $user['fullname']; ?>
-</p>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Qty</th>
+                <th>Price</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php while ($item = $items->fetch_assoc()): ?>
+                <tr>
+                    <td><?= receiptEscape($item['product_name']) ?></td>
+                    <td><?= (int)$item['quantity'] ?></td>
+                    <td><?= number_format((float)$item['price'], 2) ?></td>
+                    <td><?= number_format((float)$item['total_price'], 2) ?></td>
+                </tr>
+            <?php endwhile; ?>
+        </tbody>
+    </table>
 
-<p>
-<strong>Role:</strong>
-<?= ucfirst($user['role']); ?>
-</p>
+    <?php
+    $items->free();
+    $stmt->close();
+    ?>
 
-<p>
-<strong>Employee No:</strong>
-<?= $user['employee_no']; ?>
-</p>
+    <hr>
 
-<p>
-<strong>Branch:</strong>
-<?= $user['branch']; ?>
-</p>
+    <h4>
+        Total:
+        <?= receiptEscape($company['currency']) ?>
+        <?= number_format((float)$sale['total_amount'], 2) ?>
+    </h4>
 
-<p>
-<strong>Payment Method:</strong>
-<?= $sale['payment_method']; ?>
-</p>
+    <hr>
 
-<hr>
+    <p class="text-center">Thank you for shopping with us.</p>
 
-<table class="table">
+    <?php if (!empty($company['address'])): ?>
+        <p class="text-center">📍 <?= receiptEscape($company['address']) ?></p>
+    <?php endif; ?>
 
-<tr>
-<th>Product</th>
-<th>Qty</th>
-<th>Price</th>
-<th>Total</th>
-</tr>
+    <?php if (!empty($company['phone'])): ?>
+        <p class="text-center">📞 <?= receiptEscape($company['phone']) ?></p>
+    <?php endif; ?>
 
-<?php while($item=mysqli_fetch_assoc($items)){ ?>
+    <?php if (!empty($company['email'])): ?>
+        <p class="text-center">📧 <?= receiptEscape($company['email']) ?></p>
+    <?php endif; ?>
 
-<tr>
+    <?php if (!empty($company['receipt_footer'])): ?>
+        <p class="text-center">
+            <?= receiptEscape($company['receipt_footer']) ?>
+        </p>
+    <?php endif; ?>
 
-<td>
-<?= $item['product_name']; ?>
-</td>
+    <div class="text-center mt-3">
+        <?php
+        $qrData = $company['company_name']
+            . ' | Receipt: ' . $sale['receipt_no']
+            . ' | Date: ' . date('d-m-Y', strtotime($sale['created_at']));
 
-<td>
-<?= $item['quantity']; ?>
-</td>
+        $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data='
+            . urlencode($qrData);
+        ?>
 
-<td>
-<?= number_format($item['price'],2); ?>
-</td>
+        <img src="<?= receiptEscape($qrUrl) ?>" alt="Receipt QR Code">
 
-<td>
-<?= number_format($item['total_price'],2); ?>
-</td>
+        <p class="mt-2">Receipt Verification Code</p>
+    </div>
 
-</tr>
+    <button onclick="window.print()" class="btn btn-success w-100">
+        🖨 Print Receipt
+    </button>
 
-<?php } ?>
+    <a href="sales.php" class="btn btn-primary w-100 mt-2">
+        🛒 New Sale
+    </a>
 
-</table>
+    <a href="dashboard.php" class="btn btn-success w-100 mt-2">
+        🏠 Dashboard
+    </a>
 
-<hr>
-
-<h4>
-Total:
-<?= $company['currency']; ?>
-<?= number_format($sale['total_amount'],2); ?>
-</h4>
-
-<hr>
-
-<p class="text-center">
-Thank you for shopping with us.
-</p>
-
-<p class="text-center">
-📍 <?= $company['address']; ?>
-</p>
-
-<p class="text-center">
-📞 <?= $company['phone']; ?>
-</p>
-
-<p class="text-center">
-📧 <?= $company['email']; ?>
-</p>
-
-<p class="text-center">
-<?= $company['receipt_footer']; ?>
-</p>
-
-<div class="text-center mt-3">
-
-<img
-src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=<?= urlencode(
-$company['company_name'].' | Receipt: '.$sale['receipt_no'].' | Date: '.date('d-m-Y', strtotime($sale['created_at']))
-); ?>"
-alt="QR Code">
-
-<p class="mt-2">
-Receipt Verification Code
-</p>
-
-</div>
-
-<button
-onclick="window.print()"
-class="btn btn-success w-100">
-
-🖨 Print Receipt
-
-</button>
-
-<a href="sales.php" class="btn btn-primary w-100 mt-2">
-🛒 New Sale
-</a>
-
-<a href="dashboard.php" class="btn btn-success w-100 mt-2">
-🏠 Dashboard
-</a>
-
-<a href="index.php" class="btn btn-secondary w-100 mt-2">
-🏡 Homepage
-</a>
+    <a href="index.php" class="btn btn-secondary w-100 mt-2">
+        🏡 Homepage
+    </a>
 
 </div>
 
